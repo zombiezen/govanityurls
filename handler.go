@@ -62,35 +62,110 @@ func newHandler(config []byte) (*handler, error) {
 	}
 	h.cacheControl = fmt.Sprintf("public, max-age=%d", cacheAge)
 	for path, e := range parsed.Paths {
-		pc := pathConfig{
+		if user, repo, ok := isGitHubRepo(e.Repo); ok {
+			base := "https://github.com/" + user + "/" + repo
+			if e.VCS != "" && e.VCS != "git" {
+				return nil, fmt.Errorf("configuration for %v: detected GitHub repository, but VCS = %s", path, e.VCS)
+			}
+			display := e.Display
+			if display == "" {
+				display = fmt.Sprintf("%v %v/tree/master{/dir} %v/blob/master{/dir}/{file}#L{line}", base, base, base)
+			}
+			h.paths = append(h.paths, pathConfig{
+				path:    strings.TrimSuffix(path, "/"),
+				repo:    base + ".git",
+				display: display,
+				vcs:     "git",
+			})
+			continue
+		}
+		if user, repo, isGit, ok := isBitbucketRepo(e.Repo); ok {
+			base := "https://bitbucket.org/" + user + "/" + repo
+			switch {
+			case e.VCS == "hg":
+				if isGit {
+					return nil, fmt.Errorf("configuration for %v: VCS is hg, but repo has .git suffix", path)
+				}
+				display := e.Display
+				if display == "" {
+					display = fmt.Sprintf("%v %v/src/default{/dir} %v/src/default{/dir}/{file}#{file}-{line}", base, base, base)
+				}
+				h.paths = append(h.paths, pathConfig{
+					path:    strings.TrimSuffix(path, "/"),
+					repo:    base,
+					display: display,
+					vcs:     "hg",
+				})
+			case e.VCS == "git" || (e.VCS == "" && isGit):
+				display := e.Display
+				if display == "" {
+					display = fmt.Sprintf("%v %v/src/master{/dir} %v/src/master{/dir}/{file}#{file}-{line}", base, base, base)
+				}
+				h.paths = append(h.paths, pathConfig{
+					path:    strings.TrimSuffix(path, "/"),
+					repo:    base + ".git",
+					display: display,
+					vcs:     "git",
+				})
+			case e.VCS == "" && !isGit:
+				return nil, fmt.Errorf("configuration for %v: must specify either 'vcs: git' or 'vcs: hg' for Bitbucket repository", path)
+			default:
+				return nil, fmt.Errorf("configuration for %v: detected Bitbucket repository, but VCS = %s", path, e.VCS)
+			}
+			continue
+		}
+		if e.VCS == "" {
+			return nil, fmt.Errorf("configuration for %v: cannot infer VCS from %s", path, e.Repo)
+		} else if e.VCS != "bzr" && e.VCS != "git" && e.VCS != "hg" && e.VCS != "svn" {
+			return nil, fmt.Errorf("configuration for %v: unknown VCS %s", path, e.VCS)
+		}
+		h.paths = append(h.paths, pathConfig{
 			path:    strings.TrimSuffix(path, "/"),
 			repo:    e.Repo,
 			display: e.Display,
 			vcs:     e.VCS,
-		}
-		switch {
-		case e.Display != "":
-			// Already filled in.
-		case strings.HasPrefix(e.Repo, "https://github.com/"):
-			pc.display = fmt.Sprintf("%v %v/tree/master{/dir} %v/blob/master{/dir}/{file}#L{line}", e.Repo, e.Repo, e.Repo)
-		case strings.HasPrefix(e.Repo, "https://bitbucket.org"):
-			pc.display = fmt.Sprintf("%v %v/src/default{/dir} %v/src/default{/dir}/{file}#{file}-{line}", e.Repo, e.Repo, e.Repo)
-		}
-		switch {
-		case e.VCS != "":
-			// Already filled in.
-			if e.VCS != "bzr" && e.VCS != "git" && e.VCS != "hg" && e.VCS != "svn" {
-				return nil, fmt.Errorf("configuration for %v: unknown VCS %s", path, e.VCS)
-			}
-		case strings.HasPrefix(e.Repo, "https://github.com/"):
-			pc.vcs = "git"
-		default:
-			return nil, fmt.Errorf("configuration for %v: cannot infer VCS from %s", path, e.Repo)
-		}
-		h.paths = append(h.paths, pc)
+		})
 	}
 	sort.Sort(h.paths)
 	return h, nil
+}
+
+func isGitHubRepo(url string) (user, repo string, ok bool) {
+	const httpsPrefix = "https://github.com/"
+	if !strings.HasPrefix(url, httpsPrefix) {
+		return "", "", false
+	}
+	path := url[len(httpsPrefix):]
+	i := strings.IndexByte(path, '/')
+	if i == -1 {
+		return "", "", false
+	}
+	user, repo = path[:i], path[i+1:]
+	if strings.Contains(repo, "/") {
+		return "", "", false
+	}
+	return user, strings.TrimSuffix(repo, ".git"), true
+}
+
+func isBitbucketRepo(url string) (user, repo string, isGit bool, ok bool) {
+	const httpsPrefix = "https://bitbucket.org/"
+	if !strings.HasPrefix(url, httpsPrefix) {
+		return "", "", false, false
+	}
+	path := url[len(httpsPrefix):]
+	i := strings.IndexByte(path, '/')
+	if i == -1 {
+		return "", "", false, false
+	}
+	user, repo = path[:i], path[i+1:]
+	if strings.Contains(repo, "/") {
+		return "", "", false, false
+	}
+	const gitSuffix = ".git"
+	if strings.HasSuffix(repo, gitSuffix) {
+		return user, repo[:len(repo)-len(gitSuffix)], true, true
+	}
+	return user, repo, false, true
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

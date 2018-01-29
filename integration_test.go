@@ -70,7 +70,7 @@ func TestIntegration(t *testing.T) {
 				"    repo: https://github.com/rakyll/portmidi\n",
 			importPath: "example.com/portmidi",
 			getURLArgv: gitURLArgv,
-			wantURL:    "https://github.com/rakyll/portmidi",
+			wantURL:    "https://github.com/rakyll/portmidi.git",
 		},
 		{
 			name: "Bitbucket Mercurial",
@@ -88,7 +88,7 @@ func TestIntegration(t *testing.T) {
 			config: "host: example.com\n" +
 				"paths:\n" +
 				"  /cardcpx:\n" +
-				"    repo: https://bitbucket.org/zombiezen/cardcpx.git\n" +
+				"    repo: https://bitbucket.org/zombiezen/cardcpx\n" +
 				"    vcs: git\n",
 			importPath: "example.com/cardcpx/natsort",
 			getURLArgv: gitURLArgv,

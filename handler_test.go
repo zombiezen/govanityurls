@@ -37,20 +37,20 @@ func TestHandler(t *testing.T) {
 			config: "host: example.com\n" +
 				"paths:\n" +
 				"  /portmidi:\n" +
-				"    repo: https://github.com/rakyll/portmidi\n" +
+				"    repo: https://github.com/rakyll/portmidi.git\n" +
 				"    display: https://github.com/rakyll/portmidi _ _\n",
 			path:     "/portmidi",
-			goImport: "example.com/portmidi git https://github.com/rakyll/portmidi",
+			goImport: "example.com/portmidi git https://github.com/rakyll/portmidi.git",
 			goSource: "example.com/portmidi https://github.com/rakyll/portmidi _ _",
 		},
 		{
-			name: "display GitHub inference",
+			name: "GitHub inference",
 			config: "host: example.com\n" +
 				"paths:\n" +
 				"  /portmidi:\n" +
 				"    repo: https://github.com/rakyll/portmidi\n",
 			path:     "/portmidi",
-			goImport: "example.com/portmidi git https://github.com/rakyll/portmidi",
+			goImport: "example.com/portmidi git https://github.com/rakyll/portmidi.git",
 			goSource: "example.com/portmidi https://github.com/rakyll/portmidi https://github.com/rakyll/portmidi/tree/master{/dir} https://github.com/rakyll/portmidi/blob/master{/dir}/{file}#L{line}",
 		},
 		{
@@ -72,8 +72,19 @@ func TestHandler(t *testing.T) {
 				"    repo: https://bitbucket.org/zombiezen/mygit\n" +
 				"    vcs: git\n",
 			path:     "/mygit",
-			goImport: "example.com/mygit git https://bitbucket.org/zombiezen/mygit",
-			goSource: "example.com/mygit https://bitbucket.org/zombiezen/mygit https://bitbucket.org/zombiezen/mygit/src/default{/dir} https://bitbucket.org/zombiezen/mygit/src/default{/dir}/{file}#{file}-{line}",
+			goImport: "example.com/mygit git https://bitbucket.org/zombiezen/mygit.git",
+			goSource: "example.com/mygit https://bitbucket.org/zombiezen/mygit https://bitbucket.org/zombiezen/mygit/src/master{/dir} https://bitbucket.org/zombiezen/mygit/src/master{/dir}/{file}#{file}-{line}",
+		},
+		{
+			name: "Bitbucket Git with .git suffix",
+			config: "host: example.com\n" +
+				"paths:\n" +
+				"  /mygit:\n" +
+				"    repo: https://bitbucket.org/zombiezen/mygit.git\n" +
+				"    vcs: git\n",
+			path:     "/mygit",
+			goImport: "example.com/mygit git https://bitbucket.org/zombiezen/mygit.git",
+			goSource: "example.com/mygit https://bitbucket.org/zombiezen/mygit https://bitbucket.org/zombiezen/mygit/src/master{/dir} https://bitbucket.org/zombiezen/mygit/src/master{/dir}/{file}#{file}-{line}",
 		},
 		{
 			name: "subpath",
@@ -83,7 +94,7 @@ func TestHandler(t *testing.T) {
 				"    repo: https://github.com/rakyll/portmidi\n" +
 				"    display: https://github.com/rakyll/portmidi _ _\n",
 			path:     "/portmidi/foo",
-			goImport: "example.com/portmidi git https://github.com/rakyll/portmidi",
+			goImport: "example.com/portmidi git https://github.com/rakyll/portmidi.git",
 			goSource: "example.com/portmidi https://github.com/rakyll/portmidi _ _",
 		},
 		{
@@ -94,7 +105,7 @@ func TestHandler(t *testing.T) {
 				"    repo: https://github.com/rakyll/portmidi\n" +
 				"    display: https://github.com/rakyll/portmidi _ _\n",
 			path:     "/portmidi/foo",
-			goImport: "example.com/portmidi git https://github.com/rakyll/portmidi",
+			goImport: "example.com/portmidi git https://github.com/rakyll/portmidi.git",
 			goSource: "example.com/portmidi https://github.com/rakyll/portmidi _ _",
 		},
 	}
